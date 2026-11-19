@@ -1,5 +1,5 @@
 #pragma once
 
-#include "shic/types/alias.h"
+#include <stddef.h>
 
-#define MAX_ALIGN alignof(u64)
+#define MAX_ALIGN alignof(max_align_t)
