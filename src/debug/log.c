@@ -1,15 +1,15 @@
 #include "shic/debug/log.h"
 #include "shic/io/print.h"
 #include "shic/memory/mallocator.h"
-#include "shic/compiler/attribute.h"
+#include "shic/core/fnattrib.h"
 
 static String g_buf;
 
-static attribute_onInit void _initialize() {
+static execOnInit void constructor() {
 	string_init(allocator(&g_mallocator), &g_buf, nullptr, 512);
 }
 
-static attribute_onExit void _destroy() {
+static execOnExit void destructor() {
 	string_destroy(g_buf);
 }
 

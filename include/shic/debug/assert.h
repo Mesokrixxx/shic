@@ -15,6 +15,7 @@
 		exit(1); \
 	} while (0)
 
+#undef unreachable
 #define unreachable() assert(UNREACHABLE, "unreachable")
 
 #define abort(fmt, ...) assert(ABORTED, (fmt) __VA_OPT__(,) __VA_ARGS__)

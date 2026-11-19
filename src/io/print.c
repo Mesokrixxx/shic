@@ -1,24 +1,31 @@
 #include "shic/io/print.h"
 #include "shic/memory/mallocator.h"
 #include "shic/debug/assert.h"
-#include "shic/compiler/attribute.h"
+#include "shic/core/fnattrib.h"
 #include "shic/debug/assert.h"
 #include "shic/math/util.h"
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
+
+#ifdef WINDOWS
+# include <io.h>
+# define write _write
+#else
+# include <unistd.h>
+#endif // WINDOWS
 
 static Dynlist(String) g_bufs;
 
-static attribute_onInit void _initialize() {
+static execOnInit void constructor() {
 	dynlist_init(allocator(&g_mallocator), &g_bufs, 3);
 	memset(g_bufs, 0, sizeof(String) * dynlist_capacity(g_bufs));
 	for (u64 i = 0; i < 3; i++)
 		string_init(allocator(&g_mallocator), &g_bufs[i], nullptr, 512);
 }
 
-static attribute_onExit void _destroy() {
+static execOnExit void destructor() {
 	dynlist_forEach(g_bufs, it)
 		string_destroy(*it.elem);
 	dynlist_destroy(g_bufs);
@@ -47,14 +54,14 @@ static void bufAdd(String *destptr, Any type) {
 		case (ANYTYPE_U16):
 		case (ANYTYPE_U32):
 		case (ANYTYPE_U64):
-			len = snprintf(tmp, sizeof(tmp), "%lu", type.unsignedInt);
+			len = snprintf(tmp, sizeof(tmp), "%" PRIu64, type.unsignedInt);
 			break ;
 		
 		case (ANYTYPE_I8):
 		case (ANYTYPE_I16):
 		case (ANYTYPE_I32):
 		case (ANYTYPE_I64):
-			len = snprintf(tmp, sizeof(tmp), "%li", type.signedInt);
+			len = snprintf(tmp, sizeof(tmp), "%" PRIi64, type.signedInt);
 			break ;
 
 		case (ANYTYPE_F32):

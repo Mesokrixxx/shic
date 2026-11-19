@@ -1,3 +1,4 @@
 *.o
 .clangd
 libshic.a
+shic.lib
