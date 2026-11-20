@@ -15,3 +15,6 @@ void sparseset_delete(SparseSet *ss, u64 id);
 void *sparseset_get(SparseSet *ss, u64 id);
 bool sparseset_has(const SparseSet *ss, u64 id);
 void sparseset_destroy(SparseSet *ss);
+
+#define sparseset_getIdx(ss, id) ({ (ss)->sparse[(id)]; })
+#define sparseset_getId(ss, idx) ({ (ss)->dense[(idx)]; })
