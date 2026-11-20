@@ -4,7 +4,7 @@ CC = clang
 CFLAGS = -std=c23 -Wall -Wextra -Iinclude/
 LDFLAGS = 
 
-SRC += src/container/dynlist.c src/container/string.c src/container/sparseset.c
+SRC += src/container/dynlist.c src/container/string.c src/container/sparseset.c src/container/bitfield.c
 SRC += src/debug/log.c
 SRC += src/error/error.c
 SRC += src/io/file.c src/io/print.c 
