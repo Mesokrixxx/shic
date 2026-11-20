@@ -4,7 +4,6 @@
 #include "shic/debug/assert.h"
 #include <string.h>
 
-#define SPARSESET_START_SIZE 8
 #define SPARSESET_UNUSED_ID UINT64_MAX
 
 static void *denseCreate(Allocator *allocator, u64 cap, u64 itemSize) {
@@ -23,18 +22,19 @@ static void *getItem(void *dense, u64 cap, u64 idx, u64 itemSize) {
 
 SparseSet *sparseset_create(Allocator *allocator, u64 itemSize) {
 	Dynlist(u64) sparse;
-	dynlist_init(allocator, &sparse, SPARSESET_START_SIZE);
+	dynlist_init(allocator, &sparse, DYNLIST_MIN_SIZE);
+	dynlist_sizeSet(sparse, dynlist_capacity(sparse));
 	dynlist_forEach(sparse, it)
 		*it.elem = SPARSESET_UNUSED_ID;
 
-	void *dense = denseCreate(allocator, SPARSESET_START_SIZE, itemSize);
+	void *dense = denseCreate(allocator, DYNLIST_MIN_SIZE, itemSize);
 
 	SparseSet *ss = allocator_alloc(allocator, sizeof(SparseSet));
 	*ss = (SparseSet){
 		.allocator = allocator,
 		.sparse = sparse,
 		.dense = dense,
-		.denseCap = SPARSESET_START_SIZE,
+		.denseCap = DYNLIST_MIN_SIZE,
 		.itemSize = itemSize,
 	};
 

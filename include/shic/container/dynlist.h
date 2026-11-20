@@ -4,6 +4,8 @@
 #include "shic/core/macros.h"
 #include "shic/math/util.h"
 
+#define DYNLIST_MIN_SIZE 8
+
 typedef struct {
 	Allocator *allocator;
 	u64 used, reserved;
