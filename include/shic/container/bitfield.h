@@ -4,11 +4,12 @@
 
 typedef Dynlist(u64) Bitfield;
 
-#define bitfield_setOn(bfptr, ...) _bitfield_setImpl((bfptr), true, (const u64[]){ __VA_ARGS__ }, NARG(__VA_ARGS__))
-#define bitfield_setOff(bfptr, ...) _bitfield_setImpl((bfptr), false, (const u64[]){ __VA_ARGS__ }, NARG(__VA_ARGS__))
-
 bool bitfield_status(const Bitfield bf, u64 idx);
 
+#define bitfield_setOn(bfptr, ...) _bitfield_setImpl((bfptr), true, (const u64[]){ __VA_ARGS__ }, NARG(__VA_ARGS__))
+#define bitfield_setOff(bfptr, ...) _bitfield_setImpl((bfptr), false, (const u64[]){ __VA_ARGS__ }, NARG(__VA_ARGS__))
+#define bitfield_vsetOn(bfptr, idxs, idxCount) _bitfield_setImpl((bfptr), true, (idxs), (idxCount))
+#define bitfield_vsetOff(bfptr, idxs, idxCount) _bitfield_setImpl((bfptr), false, (idxs), (idxCount))
 #define bitfield_init(allocator, bfptr, ...) \
 	do { \
 		typeof(bfptr) _bfptr = (bfptr); \
