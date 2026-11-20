@@ -1,6 +1,6 @@
 #include "shic/container/bitfield.h"
 
-void bitfield_set(Bitfield *bfptr, u64 idx, bool active) {
+static void bitSet(Bitfield *bfptr, bool status, u64 idx) {
 	const u64 row = idx / 64;
 	const u64 off = idx % 64;
 	const u64 mask = (u64)1 << off; 
@@ -12,10 +12,15 @@ void bitfield_set(Bitfield *bfptr, u64 idx, bool active) {
 			*it.elem = 0;
 	}
 
-	if (active)
+	if (status)
 		(*bfptr)[row] |= mask;
 	else
 	 	(*bfptr)[row] &= ~mask;
+}
+
+void _bitfield_setImpl(Bitfield *bfptr, bool status, const u64 *idxs, u64 idxCount) {
+	for (u64 i = 0; i < idxCount; i++)
+		bitSet(bfptr, status, idxs[i]);
 }
 
 bool bitfield_status(const Bitfield bf, u64 idx) {
