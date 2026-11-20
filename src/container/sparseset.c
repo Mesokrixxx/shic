@@ -15,7 +15,7 @@ static void *denseCreate(Allocator *allocator, u64 cap, u64 itemSize) {
 
 static void *getItem(void *dense, u64 cap, u64 idx, u64 itemSize) {
 	return 
-		(u8 *)dense
+		(u8 *)dense 
 		+ math_roundupPow2(sizeof(u64) * cap, MAX_ALIGN)
 		+ idx * itemSize;
 }
@@ -78,7 +78,7 @@ void sparseset_insert(SparseSet *ss, u64 id, const void *item) {
 	memcpy(
 		getItem(ss->dense, ss->denseCap, idx, ss->itemSize),
 		item, ss->itemSize);
-	((u64 *)ss->dense)[idx] = id;
+	ss->dense[idx] = id;
 }
 
 void sparseset_delete(SparseSet *ss, u64 id) {
@@ -90,9 +90,9 @@ void sparseset_delete(SparseSet *ss, u64 id) {
 		return ;
 
 	u64 lastIdx = ss->denseSize - 1;
-	u64 lastId = ((u64 *)ss->dense)[lastIdx];
+	u64 lastId = ss->dense[lastIdx];
 	if (idx != lastIdx) {
-		((u64 *)ss->dense)[idx] = lastId;
+		ss->dense[idx] = lastId;
 		ss->sparse[lastId] = idx;
 		
 		memcpy(

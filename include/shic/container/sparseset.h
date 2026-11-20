@@ -5,7 +5,7 @@
 typedef struct {
 	Allocator *allocator;
 	Dynlist(u64) sparse;
-	void *dense;
+	u64 *dense;
 	u64 denseSize, denseCap, itemSize;
 } SparseSet;
 
