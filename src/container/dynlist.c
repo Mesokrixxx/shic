@@ -3,8 +3,6 @@
 #include "shic/types/defs.h"
 #include <string.h>
 
-#define DYNLIST_MIN_SIZE 8
-
 static u64 headerSize() {
 	return math_roundupPow2(sizeof(DynlistHeader), MAX_ALIGN);
 }
