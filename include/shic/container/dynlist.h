@@ -2,6 +2,7 @@
 
 #include "shic/memory/allocator.h"
 #include "shic/core/macros.h"
+#include "shic/math/util.h"
 
 typedef struct {
 	Allocator *allocator;
@@ -20,7 +21,7 @@ Allocator *dynlist_allocator(void *list);
 void dynlist_destroy(void *list);
 
 #define dynlist_clear(list) dynlist_sizeSet((list), 0)
-#define dynlist_forEach(list, it) _dynlist_forEachImpl((list), it, CONCAT(_list, __COUNTER__), CONCAT(_it, __COUNTER__))
+#define dynlist_forEach(...) VMACRO(_dynlist_forEach, __VA_ARGS__) 
 
 // @use    dynlist_init(allocator, listptr[, reserve])
 // @return -
@@ -37,14 +38,15 @@ void dynlist_destroy(void *list);
 void _dynlist_initImpl(Allocator *allocator, void *listptr, u64 reserve, u64 typeSize);
 void _dynlist_pushBackImpl(void *listptr, const void *x, u64 n);
 
-#define _dynlist_forEachImpl(list, it, listname, itname) \
+#define _dynlist_forEachImpl(list, off, limit, it, listname, itname) \
 	typedef struct { \
 		u64 idx, end; \
 		typeof_unqual(list) elem; \
 	} itname; \
-	typeof(list) listname = (list); \
+	typeof(list) listname = list; \
 	for (itname it = { \
-		.end = listname ? dynlist_size(listname) : 0, \
+		.idx = off, \
+		.end = listname ? math_min(dynlist_size(listname), limit) : 0, \
 		.elem = listname, \
 	}; it.idx < it.end; \
 	it.elem = listname + ++it.idx)
@@ -53,3 +55,6 @@ void _dynlist_pushBackImpl(void *listptr, const void *x, u64 n);
 #define _dynlist_init3(allocator, listptr, reserve) _dynlist_initImpl((allocator), (listptr), (reserve), sizeof(**(listptr)))
 #define _dynlist_pushBack2(listptr, x) _dynlist_pushBackImpl((listptr), (x), 1)
 #define _dynlist_pushBack3(listptr, x, n) _dynlist_pushBackImpl((listptr), (x), (n))
+#define _dynlist_forEach2(list, it) _dynlist_forEachImpl((list), 0, UINT64_MAX, it, CONCAT(_list, __COUNTER__), CONCAT(_it, __COUNTER__))
+#define _dynlist_forEach3(list, off, it) _dynlist_forEachImpl((list), (off), UINT64_MAX, it, CONCAT(_list, __COUNTER__), CONCAT(_it, __COUNTER__))
+#define _dynlist_forEach4(list, off, limit, it) _dynlist_forEachImpl((list), (off), (limit), it, CONCAT(_list, __COUNTER__), CONCAT(_it, __COUNTER__))
