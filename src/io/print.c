@@ -170,8 +170,10 @@ static void bufFillWithFmt(String *destptr, const char *fmt, const Any *args, u6
 						bufAdd(destptr, *args++); 
 						argCount--;
 					}
-					else
+					else {
+						string_append(destptr, '{');
 						string_append(destptr, c);
+					}
 					break ;
 
 				case ('t'):
