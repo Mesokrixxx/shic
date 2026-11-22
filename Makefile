@@ -4,13 +4,13 @@ CC = clang
 CFLAGS = -std=c23 -Wall -Wextra -Iinclude/
 LDFLAGS = 
 
-SRC += src/container/dynlist.c src/container/string.c src/container/sparseset.c src/container/bitfield.c
+SRC += src/container/dynlist.c src/container/string.c src/container/sparseset.c src/container/bitfield.c src/container/map.c
 SRC += src/debug/log.c
 SRC += src/error/error.c
 SRC += src/io/file.c src/io/print.c 
 SRC += src/math/util.c
 SRC += src/memory/allocator.c src/memory/mallocator.c
-SRC += src/types/any.c src/types/stringview.c
+SRC += src/types/any.c src/types/stringview.c src/types/hash.c
 
 ifeq ($(OS),Windows_NT)
 	CFLAGS += -DWINDOWS
