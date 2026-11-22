@@ -20,9 +20,9 @@ static void *getItem(void *dense, u64 cap, u64 idx, u64 itemSize) {
 		+ idx * itemSize;
 }
 
-SparseSet *sparseset_create(Allocator *allocator, u64 itemSize) {
+SparseSet *_sparseset_createImpl(Allocator *allocator, u64 itemSize, u64 reserve) {
 	Dynlist(u64) sparse;
-	dynlist_init(allocator, &sparse, DYNLIST_MIN_SIZE);
+	dynlist_init(allocator, &sparse, math_max(DYNLIST_MIN_SIZE, reserve));
 	dynlist_sizeSet(sparse, dynlist_capacity(sparse));
 	dynlist_forEach(sparse, it)
 		*it.elem = SPARSESET_UNUSED_ID;
