@@ -47,7 +47,7 @@ void sparseset_insert(SparseSet *ss, u64 id, const void *item) {
 		SPARSESET_UNUSED_ID);
 
 	u64 oldSparseCap = dynlist_capacity(ss->sparse);
-	if (dynlist_reserve(&ss->sparse, id)) {
+	if (dynlist_reserve(&ss->sparse, id + 1)) {
 		dynlist_sizeSet(ss->sparse, dynlist_capacity(ss->sparse));
 		dynlist_forEach(ss->sparse, oldSparseCap, it)
 			*it.elem = SPARSESET_UNUSED_ID;
