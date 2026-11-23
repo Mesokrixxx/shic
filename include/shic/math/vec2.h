@@ -18,10 +18,14 @@ typedef union {
 // @desc   v2() is equivalent to v2(0), v2(xy) is equivalent to v2(xy, xy)
 #define v2(...) VMACRO(_v2, __VA_ARGS__)
 
+#define v2_add(a, b) ({ typeof(a) _a = (a); typeof(b) _b = (b); v2(_a.x + _b.x, _a.y + _b.y); })
+
 // @use    v2i() | v2i(xy) | v2i(x, y)
 // @return V2i
 // @desc   v2i() is equivalent to v2i(0), v2i(xy) is equivalent to v2i(xy, xy)
 #define v2i(...) VMACRO(_v2i, __VA_ARGS__)
+
+#define v2i_add(a, b) ({ typeof(a) _a = (a); typeof(b) _b = (b); v2i(_a.x + _b.x, _a.y + _b.y); })
 
 // ---
 
