@@ -24,6 +24,8 @@
 	X(SV) \
 	X(V2) \
 	X(V2I) \
+	X(V3) \
+	X(V4) \
 	X(PTR)
 
 typedef enum {
@@ -43,10 +45,10 @@ typedef struct {
 		char c;
 		const char *cstr;
 		StringView sv;
-		union {
-			V2 vec2;
-			V2i vec2i;
-		};
+		V2 vec2;
+		V2i vec2i;
+		V3 vec3;
+		V4 vec4;
 		const void *ptr;
 	};
 } Any;
@@ -101,6 +103,8 @@ Any _any_parseNumberImpl(const char *cstr, const char **endptr);
 		StringView: (Any){ .type = ANYTYPE_SV, .sv = _any_orZero(StringView, _x) }, \
 		V2: (Any){ .type = ANYTYPE_V2, .vec2 = _any_orZero(V2, _x) }, \
 		V2i: (Any){ .type = ANYTYPE_V2I, .vec2i = _any_orZero(V2i, _x) }, \
+		V3: (Any){ .type = ANYTYPE_V3, .vec3 = _any_orZero(V3, _x) }, \
+		V4: (Any){ .type = ANYTYPE_V4, .vec4 = _any_orZero(V4, _x) }, \
 		Any: _x, \
 		default: type_isPtr(_x) ?  \
 			(Any){ .type = ANYTYPE_PTR, .ptr = *(void **)&_x } \

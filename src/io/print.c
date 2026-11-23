@@ -89,11 +89,23 @@ static void bufAdd(String *destptr, Any type) {
 			break ;
 
 		case (ANYTYPE_V2):
-			len = snprintf(tmp, sizeof(tmp), "(%f, %f)", type.vec2.x, type.vec2.y);
+			len = snprintf(tmp, sizeof(tmp), "(%f, %f)", 
+				type.vec2.x, type.vec2.y);
 			break ;
 
 		case (ANYTYPE_V2I):
-			len = snprintf(tmp, sizeof(tmp), "(%d, %d)", type.vec2i.x, type.vec2i.y);
+			len = snprintf(tmp, sizeof(tmp), "(%d, %d)",
+				type.vec2i.x, type.vec2i.y);
+			break ;
+
+		case (ANYTYPE_V3):
+			len = snprintf(tmp, sizeof(tmp), "(%f, %f, %f)",
+				type.vec3.x, type.vec3.y, type.vec3.z);
+			break ;
+		
+		case (ANYTYPE_V4):
+			len = snprintf(tmp, sizeof(tmp), "(%f, %f, %f, %f)",
+				type.vec4.x, type.vec4.y, type.vec4.z, type.vec4.w);
 			break ;
 
 		default:
