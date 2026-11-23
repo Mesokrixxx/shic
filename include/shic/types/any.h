@@ -4,6 +4,7 @@
 #include "shic/core/macros.h"
 #include "shic/types/logic.h"
 #include "shic/types/stringview.h"
+#include "shic/math/types.h"
 
 #define _ANYTYPE_LIST(X) \
 	X(UNKNOWN) \
@@ -21,6 +22,8 @@
 	X(CHAR) \
 	X(CSTR) \
 	X(SV) \
+	X(V2) \
+	X(V2I) \
 	X(PTR)
 
 typedef enum {
@@ -40,6 +43,10 @@ typedef struct {
 		char c;
 		const char *cstr;
 		StringView sv;
+		union {
+			V2 vec2;
+			V2i vec2i;
+		};
 		const void *ptr;
 	};
 } Any;
@@ -92,6 +99,8 @@ Any _any_parseNumberImpl(const char *cstr, const char **endptr);
 		char*: (Any){ .type = ANYTYPE_CSTR, .cstr = _any_orZero(char*, _x) }, \
 		const char*: (Any){ .type = ANYTYPE_CSTR, .cstr = _any_orZero(const char*, _x) }, \
 		StringView: (Any){ .type = ANYTYPE_SV, .sv = _any_orZero(StringView, _x) }, \
+		V2: (Any){ .type = ANYTYPE_V2, .vec2 = _any_orZero(V2, _x) }, \
+		V2i: (Any){ .type = ANYTYPE_V2I, .vec2i = _any_orZero(V2i, _x) }, \
 		Any: _x, \
 		default: type_isPtr(_x) ?  \
 			(Any){ .type = ANYTYPE_PTR, .ptr = *(void **)&_x } \

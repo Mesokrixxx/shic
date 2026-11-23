@@ -35,7 +35,7 @@ static execOnExit void destructor() {
 	do { string_clear(g_bufs[2]); abort(fmt __VA_OPT__(,) __VA_ARGS__); } while (0)
 
 static void bufAdd(String *destptr, Any type) {
-	char tmp[64] = {0};
+	char tmp[128] = {0};
 	int len = 0;
 
 	switch (type.type) {
@@ -86,6 +86,14 @@ static void bufAdd(String *destptr, Any type) {
 
 		case (ANYTYPE_PTR):
 			len = snprintf(tmp, sizeof(tmp), "%p", type.ptr);		
+			break ;
+
+		case (ANYTYPE_V2):
+			len = snprintf(tmp, sizeof(tmp), "(%f, %f)", type.vec2.x, type.vec2.y);
+			break ;
+
+		case (ANYTYPE_V2I):
+			len = snprintf(tmp, sizeof(tmp), "(%d, %d)", type.vec2i.x, type.vec2i.y);
 			break ;
 
 		default:
