@@ -5,9 +5,9 @@
 #include <string.h>
 
 typedef struct {
-	u16 dist : 16;
-	u16 hash : 15;
-	bool used : 1;
+	Hash hash;
+	u16 dist;
+	bool used;
 } MapEntry;
 
 typedef enum : u8 {
@@ -20,8 +20,6 @@ typedef enum : u8 {
 #define LOAD_LOW 0.15
 
 #define DIST_MAX UINT16_MAX
-
-#define STORED_HASH_MASK ((1 << 15) - 1)
 
 static const u32 PRIMES[] = {
     11, 53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49157, 98317,
@@ -44,7 +42,7 @@ static void *keys(Map *map) {
 
 static void *keyAt(Map *map, u64 idx) {
 	return 
-		(u8 *)keys(map);
+		(u8 *)keys(map)
 		+ map->keySize * idx;
 }
 
@@ -79,6 +77,23 @@ static void *spareValue(Map *map) {
 		+ map->valueSize * map->spare;
 }
 
+static void *dataCreate(Map *map) {
+	const u64 entrySize = map->cap * sizeof(MapEntry);
+	const u64 totSize = 
+		math_roundupPow2(entrySize, MAX_ALIGN)
+		+ math_roundupPow2(map->cap * map->keySize, MAX_ALIGN)
+		+ math_roundupPow2(map->cap * map->valueSize, MAX_ALIGN)
+		+ math_roundupPow2(2 * map->keySize, MAX_ALIGN)
+		+ math_roundupPow2(2 * map->valueSize, MAX_ALIGN);
+	
+	void *data = allocator_alloc(map->allocator, totSize);
+	
+	memset(data, 0, entrySize);
+	return data;
+}
+
+static void insertWithHash(Map *map, const void *key, const void *value, Hash hash);
+
 static void dataRehash(Map *map, RehashMethod method) {
 	if (map->rehashLocked)
 		return ;
@@ -94,7 +109,7 @@ static void dataRehash(Map *map, RehashMethod method) {
 			|| (!force && ((grow && map->prime == PRIMES_COUNT - 1) || (shrink && !map->prime))))
 		return ;
 
-	assert(force && ((grow && map->prime == PRIMES_COUNT - 1) || (shrink && !map->prime)),
+	assert(!(force && ((grow && map->prime == PRIMES_COUNT - 1) || (shrink && !map->prime))),
 		"attempted rehash but can't {}", grow ? "grow" : "shrink");
 
 	if (shrink)
@@ -109,16 +124,7 @@ static void dataRehash(Map *map, RehashMethod method) {
 
 	map->cap = PRIMES[map->prime];
 	map->size = 0;
-
-	u64 entrySize = map->cap * sizeof(MapEntry);
-	u64 totSize = 
-		math_roundupPow2(entrySize, MAX_ALIGN)
-		+ math_roundupPow2(map->cap * map->keySize, MAX_ALIGN)
-		+ math_roundupPow2(map->cap * map->valueSize, MAX_ALIGN)
-		+ math_roundupPow2(2 * map->keySize, MAX_ALIGN)
-		+ math_roundupPow2(2 * map->valueSize, MAX_ALIGN);
-	map->data = allocator_alloc(map->allocator, totSize);
-	memset(map->data, 0, entrySize);
+	map->data = dataCreate(map);
 
 	if (!oData)
 		return ;
@@ -131,9 +137,97 @@ static void dataRehash(Map *map, RehashMethod method) {
 		void *key = (u8 *)oKeys + i * map->keySize;
 		void *value = (u8 *)oValues + i * map->valueSize;
 
-		map_insert(map, key, value);
+		insertWithHash(map, key, value, oEntries[i].hash);
 	}
 	map->rehashLocked = false;
+
+	allocator_free(map->allocator, oData);
+}
+
+static void insertWithHash(Map *map, const void *key, const void *value, Hash hash) {
+	u64 pos = hash % map->cap;
+	u16 dist = 0;
+
+	bool isNew = true;
+
+	while (true) {
+		MapEntry *entry = &entries(map)[pos];
+	
+		if (!entry->used) {
+			*entry = (MapEntry){
+				.dist = dist,
+				.hash = hash,
+				.used = true,
+			};
+
+			memcpy(keyAt(map, pos), key, map->keySize);
+			memcpy(valueAt(map, pos), value, map->valueSize);
+			break ;
+		}
+
+		else if (entry->dist == dist && entry->hash == hash && map->cmpF(map, key, keyAt(map, pos))) {
+			isNew = false;
+
+			memcpy(keyAt(map, pos), key, map->keySize);
+			memcpy(valueAt(map, pos), value, map->valueSize);
+			break ;
+		}
+
+		else if (entry->dist < dist) {
+			if (isNew) {
+				map->size++;
+				isNew = false;
+			}
+
+			MapEntry oEntry = *entry;
+			*entry = (MapEntry){
+				.dist = dist,
+				.hash = hash,
+				.used = true
+			};
+
+			void *sKey = spareKey(map), *mKey = keyAt(map, pos);
+			void *sValue = spareValue(map), *mValue = valueAt(map, pos);
+
+			memcpy(sKey, mKey, map->keySize);
+			memcpy(sValue, mValue, map->valueSize);
+			memcpy(mKey, key, map->keySize);
+			memcpy(mValue, value, map->valueSize);
+
+			dist = oEntry.dist;
+			hash = oEntry.hash;
+			key = sKey;
+			value = sValue;
+
+			map->spare = 1 - map->spare;
+		}
+
+		dist++;
+		if (dist >= DIST_MAX) {
+			assert(!map->rehashLocked,
+				"edge cases reached, need fixing");
+
+			u8 *tmp = allocator_alloc(map->allocator, map->keySize + map->valueSize);
+			void *tmpKey = tmp;
+			void *tmpValue = tmp + map->keySize;
+
+			memcpy(tmpKey, key, map->keySize);
+			memcpy(tmpValue, value, map->valueSize);
+
+			dataRehash(map, REHASH_FORCE | REHASH_GROW);
+			map_insert(map, tmpKey, tmpValue);
+
+			allocator_free(map->allocator, tmp);
+			return ;
+		}
+
+		pos = (pos + 1) % map->cap;
+	}
+
+	if (isNew)
+		map->size++;
+
+	dataRehash(map, REHASH_GROW);
 }
 
 static u64 findKey(Map *map, const void *key) {
@@ -141,7 +235,6 @@ static u64 findKey(Map *map, const void *key) {
 		return INEXISTANT_KEY;
 
 	const Hash hash = map->hashF(map, key);
-	const Hash hashbits = hash & STORED_HASH_MASK;
 	
 	u64 pos = hash % map->cap;
 	u16 dist = 0;
@@ -149,10 +242,10 @@ static u64 findKey(Map *map, const void *key) {
 	while (true) {
 		MapEntry entry = entries(map)[pos];
 
-		if (!entry.used || dist >= DIST_MAX)
+		if (!entry.used || entry.dist < dist)
 			return INEXISTANT_KEY;
 
-		if (entry.hash == hashbits && map->cmpF(map, key, keyAt(map, pos)))
+		if (entry.hash == hash && map->cmpF(map, key, keyAt(map, pos)))
 			return pos;
 
 		dist++;
@@ -174,82 +267,12 @@ Map *map_create(Allocator *allocator, u64 keySize, u64 valueSize, MapHashFn hash
 }
 
 void map_insert(Map *map, const void *key, const void *value) {
-	if (!map->data)
-		dataRehash(map, REHASH_FORCE | REHASH_GROW);
-
-	Hash hash = map->hashF(map, key);
-	Hash hashbits = hash & STORED_HASH_MASK;
-
-	u64 pos = hash % map->cap;
-	u16 dist = 0;
-
-	bool isNew = true;
-
-	while (true) {
-		MapEntry *entry = &entries(map)[pos];
-	
-		if (!entry->used) {
-			*entry = (MapEntry){
-				.dist = dist,
-				.hash = hashbits,
-				.used = true,
-			};
-
-			memcpy(keyAt(map, pos), key, map->keySize);
-			memcpy(valueAt(map, pos), value, map->valueSize);
-			break ;
-		}
-
-		else if (entry->dist == dist && entry->hash == hashbits && map->cmpF(map, key, keyAt(map, pos))) {
-			isNew = false;
-
-			memcpy(keyAt(map, pos), key, map->keySize);
-			memcpy(valueAt(map, pos), value, map->valueSize);
-			break ;
-		}
-
-		else if (entry->dist < dist) {
-			if (isNew) {
-				map->size++;
-				isNew = false;
-			}
-
-			MapEntry oEntry = *entry;
-			*entry = (MapEntry){
-				.dist = dist,
-				.hash = hashbits,
-			};
-
-			void *oKey = keyAt(map, pos);
-			void *oValue = valueAt(map, pos);
-
-			memcpy(spareKey(map), oKey, map->keySize);
-			memcpy(spareValue(map), oValue, map->valueSize);
-
-			memcpy(oKey, key, map->keySize);
-			memcpy(oValue, value, map->valueSize);
-
-			dist = oEntry.dist;
-			hashbits = oEntry.hash;
-			key = oKey;
-			value = oValue;
-			map->spare = 1 - map->spare;
-		}
-
-		dist++;
-		if (dist >= DIST_MAX) {
-			dataRehash(map, REHASH_FORCE | REHASH_GROW);
-			map_insert(map, key, value);
-			return ;
-		}
-
-		pos = (pos + 1) % map->cap;
+	if (!map->data) {
+		map->cap = PRIMES[map->prime];
+		map->data = dataCreate(map);
 	}
 
-	if (isNew)
-		map->size++;
-
-	dataRehash(map, REHASH_GROW);
+	insertWithHash(map, key, value, map->hashF(map, key));
 }
 
 void *map_get(Map *map, const void *key) {
@@ -295,10 +318,10 @@ void map_destroy(Map *map) {
 	allocator_free(map->allocator, map);
 }
 
-Hash map_fixstrHash(Map *, const void *str) {
-	return hash_add_str(0xdeadbeef, str);
+Hash map_fixstrHash(Map *map, const void *str) {
+	return hash_add_bytes(0xdeadbeef, str, map->keySize);
 }
 
 bool map_fixstrCmp(Map *map, const void *s1, const void *s2) {
-	return strncmp(s1, s2, map->keySize);	
+	return !memcmp(s1, s2, map->keySize);	
 }

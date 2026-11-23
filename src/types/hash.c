@@ -11,3 +11,9 @@ Hash hash_add_str(Hash hash, const char *str) {
 		hash = hash_add_char(hash, *str++);
 	return hash;
 }
+
+Hash hash_add_bytes(Hash hash, const void *ptr, u64 n) {
+	for (u64 i = 0; i < n; i++)
+		hash = hash_add_u8(hash, ((u8 *)ptr)[i]);
+	return hash;
+}

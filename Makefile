@@ -1,8 +1,8 @@
 NAME = shic
 
 CC = clang
-CFLAGS = -std=c23 -Wall -Wextra -Iinclude/
-LDFLAGS = 
+CFLAGS = -std=c23 -Wall -Wextra -Iinclude/ -g3
+LDFLAGS = -g
 
 SRC += src/container/dynlist.c src/container/string.c src/container/sparseset.c src/container/bitfield.c src/container/map.c
 SRC += src/debug/log.c

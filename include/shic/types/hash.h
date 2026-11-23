@@ -22,3 +22,4 @@ _HASH_ADD_LIST(X)
 #undef X
 
 Hash hash_add_str(Hash hash, const char *str);
+Hash hash_add_bytes(Hash hash, const void *ptr, u64 n);
