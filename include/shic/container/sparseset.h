@@ -17,6 +17,7 @@ void sparseset_destroy(SparseSet *ss);
 
 #define sparseset_create(...) VMACRO(_sparseset_create, __VA_ARGS__)
 
+#define sparseset_size(ss) ({ (ss)->denseSize; })
 #define sparseset_getIdx(ss, id) ({ (ss)->sparse[(id)]; })
 #define sparseset_getId(ss, idx) ({ (ss)->dense[(idx)]; })
 
