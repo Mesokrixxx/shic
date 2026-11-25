@@ -4,7 +4,9 @@
 #include "shic/memory/mallocator.h"
 #include <string.h>
 
-String errStr;
+String errStr1;
+String errStr2;
+u8 errIdx;
 
 #ifdef WINDOWS
 
@@ -24,17 +26,19 @@ static execOnExit void win_destructor() {
 
 #endif // WINDOWS
 
-
 static execOnInit void constructor() {
-	string_init(allocator(&g_mallocator), &errStr, nullptr, 512);
+	string_init(allocator(&g_mallocator), &errStr1, nullptr, 512);
+	string_init(allocator(&g_mallocator), &errStr2, nullptr, 512);
+	errIdx = 0;
 }
 
 static execOnExit void destructor() {
-	string_destroy(errStr);
+	string_destroy(errStr1);
+	string_destroy(errStr2);
 }
 
 const char *error_get() {
-	return errStr;
+	return errIdx ? errStr1 : errStr2;
 }
 
 void _error_setViaCodeImpl(int code, const char *prefix) {
@@ -45,6 +49,9 @@ void _error_setViaCodeImpl(int code, const char *prefix) {
 }
 
 void _error_setImpl(const char *fmt, const Any* args, u64 argCount) {
-	string_clear(errStr);
-	vsprint(&errStr, fmt, args, argCount);
+	String dest = errIdx ? errStr2 : errStr1;
+
+	string_clear(dest);
+	vsprint(&dest, fmt, args, argCount);
+	errIdx = 1 - errIdx;
 }
