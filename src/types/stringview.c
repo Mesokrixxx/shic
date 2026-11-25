@@ -14,8 +14,9 @@ bool stringview_eq(StringView sv1, StringView sv2) {
 StringView stringview_getLine(const char *cstr) {
 	StringView sv = { .str = cstr };
 
-	while (cstr[sv.len] && cstr[sv.len] != '\n')
-		sv.len++;
+	while (cstr[sv.len++])
+		if (cstr[sv.len - 1] == '\n')
+			break ;
 	return sv;
 }
 
