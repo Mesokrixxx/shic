@@ -108,6 +108,11 @@ static void bufAdd(String *destptr, Any type) {
 				type.vec4.x, type.vec4.y, type.vec4.z, type.vec4.w);
 			break ;
 
+		case (ANYTYPE_COLOR):
+			len = snprintf(tmp, sizeof(tmp), "(%d, %d, %d, %d)",
+				type.col.r, type.col.g, type.col.b, type.col.a);
+			break ;
+
 		default:
 			unreachable();
 	}
