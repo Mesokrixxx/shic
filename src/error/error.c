@@ -10,18 +10,10 @@ u8 errIdx;
 
 #ifdef WINDOWS
 
-String tmpErrnoBuf;
-
-static execOnInit void win_constructor() {
-	string_init(allocator(&g_mallocator), &tmpErrnoBuf, nullptr, 1024);
-}
-
-static execOnExit void win_destructor() {
-	string_destroy(tmpErrnoBuf);
-}
+char tmpErrnoBuf[1024];
 
 # define strerror(code) ({ \
-		strerror_s(tmpErrnoBuf, string_capacity(tmpErrnoBuf), (code)); \
+		strerror_s(tmpErrnoBuf, sizeof(tmpErrnoBuf), (code)); \
 		(const char *)tmpErrnoBuf; })
 
 #endif // WINDOWS
