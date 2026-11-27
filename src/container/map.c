@@ -4,12 +4,6 @@
 #include "shic/debug/assert.h"
 #include <string.h>
 
-typedef struct {
-	Hash hash;
-	u16 dist;
-	bool used;
-} MapEntry;
-
 typedef enum : u8 {
 	REHASH_GROW = 1 << 0,
 	REHASH_SHRINK = 1 << 1,
@@ -21,14 +15,13 @@ typedef enum : u8 {
 
 #define DIST_MAX UINT16_MAX
 
-static const u32 PRIMES[] = {
+static const u64 PRIMES[] = {
     11, 53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49157, 98317,
     196613, 393241, 786433, 1572869, 3145739, 6291469, 12582917, 25165843,
     50331653, 100663319, 201326611, 402653189, 805306457, 1610612741
 };
 
 #define PRIMES_COUNT ARRAY_SIZE(PRIMES)
-#define INEXISTANT_KEY (PRIMES[PRIMES_COUNT - 1] + 1)
 
 static MapEntry *entries(Map *map) {
 	return map->data;
@@ -40,22 +33,10 @@ static void *keys(Map *map) {
 		+ math_roundupPow2(map->cap * sizeof(MapEntry), MAX_ALIGN);
 }
 
-static void *keyAt(Map *map, u64 idx) {
-	return 
-		(u8 *)keys(map)
-		+ map->keySize * idx;
-}
-
 static void *values(Map *map) {
 	return 
 		(u8 *)keys(map)
 		+ math_roundupPow2(map->cap * map->keySize, MAX_ALIGN);
-}
-
-static void *valueAt(Map *map, u64 idx) {
-	return 
-		(u8 *)values(map)
-		+ map->valueSize * idx;
 }
 
 static void *spares(Map *map) {
@@ -160,16 +141,16 @@ static void insertWithHash(Map *map, const void *key, const void *value, Hash ha
 				.used = true,
 			};
 
-			memcpy(keyAt(map, pos), key, map->keySize);
-			memcpy(valueAt(map, pos), value, map->valueSize);
+			memcpy(_map_keyAt(map, pos), key, map->keySize);
+			memcpy(_map_valueAt(map, pos), value, map->valueSize);
 			break ;
 		}
 
-		else if (entry->dist == dist && entry->hash == hash && map->cmpF(map, key, keyAt(map, pos))) {
+		else if (entry->dist == dist && entry->hash == hash && map->cmpF(map, key, _map_keyAt(map, pos))) {
 			isNew = false;
 
-			memcpy(keyAt(map, pos), key, map->keySize);
-			memcpy(valueAt(map, pos), value, map->valueSize);
+			memcpy(_map_keyAt(map, pos), key, map->keySize);
+			memcpy(_map_valueAt(map, pos), value, map->valueSize);
 			break ;
 		}
 
@@ -186,8 +167,8 @@ static void insertWithHash(Map *map, const void *key, const void *value, Hash ha
 				.used = true
 			};
 
-			void *sKey = spareKey(map), *mKey = keyAt(map, pos);
-			void *sValue = spareValue(map), *mValue = valueAt(map, pos);
+			void *sKey = spareKey(map), *mKey = _map_keyAt(map, pos);
+			void *sValue = spareValue(map), *mValue = _map_valueAt(map, pos);
 
 			memcpy(sKey, mKey, map->keySize);
 			memcpy(sValue, mValue, map->valueSize);
@@ -232,7 +213,7 @@ static void insertWithHash(Map *map, const void *key, const void *value, Hash ha
 
 static u64 findKey(Map *map, const void *key) {
 	if (!map->data)
-		return INEXISTANT_KEY;
+		return MAP_INEXISTANT_KEY;
 
 	const Hash hash = map->hashF(map, key);
 	
@@ -243,9 +224,9 @@ static u64 findKey(Map *map, const void *key) {
 		MapEntry entry = entries(map)[pos];
 
 		if (!entry.used || entry.dist < dist)
-			return INEXISTANT_KEY;
+			return MAP_INEXISTANT_KEY;
 
-		if (entry.hash == hash && map->cmpF(map, key, keyAt(map, pos)))
+		if (entry.hash == hash && map->cmpF(map, key, _map_keyAt(map, pos)))
 			return pos;
 
 		dist++;
@@ -278,13 +259,13 @@ void map_insert(Map *map, const void *key, const void *value) {
 void *map_get(Map *map, const void *key) {
 	const u64 pos = findKey(map, key);
 
-	return pos != INEXISTANT_KEY ? valueAt(map, pos) : nullptr;
+	return pos != MAP_INEXISTANT_KEY ? _map_valueAt(map, pos) : nullptr;
 }
 
 void map_delete(Map *map, const void *key) {
 	u64 pos = findKey(map, key);
 	
-	if (pos == INEXISTANT_KEY)
+	if (pos == MAP_INEXISTANT_KEY)
 		return ;
 
 	MapEntry *mapEntries = entries(map);
@@ -300,8 +281,8 @@ void map_delete(Map *map, const void *key) {
 		mapEntries[pos] = mapEntries[nextPos];
 		mapEntries[pos].dist--;
 
-		memcpy(keyAt(map, pos), keyAt(map, nextPos), map->keySize);
-		memcpy(valueAt(map, pos), valueAt(map, nextPos), map->valueSize);
+		memcpy(_map_keyAt(map, pos), _map_keyAt(map, nextPos), map->keySize);
+		memcpy(_map_valueAt(map, pos), _map_valueAt(map, nextPos), map->valueSize);
 
 		mapEntries[nextPos].used = false;
 		pos = nextPos;
@@ -324,4 +305,27 @@ Hash map_fixstrHash(Map *map, const void *str) {
 
 bool map_fixstrCmp(Map *map, const void *s1, const void *s2) {
 	return !memcmp(s1, s2, map->keySize);	
+}
+
+void *_map_keyAt(Map *map, u64 idx) {
+	return 
+		(u8 *)keys(map)
+		+ map->keySize * idx;
+}
+
+void *_map_valueAt(Map *map, u64 idx) {
+	return 
+		(u8 *)values(map)
+		+ map->valueSize * idx;
+}
+
+
+u64 _map_findNextEntry(Map *map, u64 start) {
+	const MapEntry *mapEntries = entries(map);
+
+	for (u64 i = start; i < map->cap; i++) {
+		if (mapEntries[i].used)
+			return i;
+	}
+	return MAP_INEXISTANT_KEY;
 }
